@@ -113,10 +113,18 @@ async function fetchCustomers(page, tagMap) {
         tbody.innerHTML = data.data.map(c => {
             const classified = classifyTags(c.tags, tagMap);
             const branchName = getBranch(c.tags, tagMap);
-            const rawPhone = c.phone || '';
-            const phoneStr = rawPhone && typeof rawPhone === 'object' ? (rawPhone.captured || '') : rawPhone;
-            const pn = c.phone_numbers || [];
-            const phone = phoneStr || (pn.length > 0 ? (typeof pn[0] === 'object' ? pn[0].captured || '' : pn[0]) : '');
+            // phone is VARCHAR containing JSON string like {"captured":"0333...","length":10,...}
+            let phone = '';
+            if (c.phone) {
+                try {
+                    const parsed = typeof c.phone === 'string' && c.phone.startsWith('{') ? JSON.parse(c.phone) : c.phone;
+                    phone = typeof parsed === 'object' ? (parsed.captured || parsed.phone_number || '') : parsed;
+                } catch { phone = c.phone; }
+            }
+            if (!phone && c.phone_numbers && c.phone_numbers.length > 0) {
+                const pn = c.phone_numbers[0];
+                phone = typeof pn === 'object' ? (pn.captured || pn.phone_number || '') : pn;
+            }
             const tagHtml = (c.tags || []).slice(0, 4).map(t => {
                 const name = typeof t === 'string' ? t : (t.name || '');
                 const entry = tagMap[name.toLowerCase()];

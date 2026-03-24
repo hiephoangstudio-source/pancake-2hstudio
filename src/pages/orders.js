@@ -94,10 +94,18 @@ async function fetchOrders(tagMap) {
 
         tbody.innerHTML = data.data.map(c => {
             const branchName = getBranch(c.tags, tagMap);
-            const rawPhone = c.phone || '';
-            const phone = rawPhone && typeof rawPhone === 'object' ? (rawPhone.captured || JSON.stringify(rawPhone)) : rawPhone;
-            const pn = c.phone_numbers || [];
-            const firstPhone = phone || (pn.length > 0 ? (typeof pn[0] === 'object' ? pn[0].captured || '' : pn[0]) : '');
+            // phone is VARCHAR containing JSON string like {"captured":"0333...","length":10,...}
+            let firstPhone = '';
+            if (c.phone) {
+                try {
+                    const parsed = typeof c.phone === 'string' && c.phone.startsWith('{') ? JSON.parse(c.phone) : c.phone;
+                    firstPhone = typeof parsed === 'object' ? (parsed.captured || parsed.phone_number || '') : parsed;
+                } catch { firstPhone = c.phone; }
+            }
+            if (!firstPhone && c.phone_numbers && c.phone_numbers.length > 0) {
+                const pn = c.phone_numbers[0];
+                firstPhone = typeof pn === 'object' ? (pn.captured || pn.phone_number || '') : pn;
+            }
             const pageName = pageNameMap[c.page_id] || c.page_id || '—';
             const tagHtml = (c.tags || []).slice(0, 3).map(t => {
                 const name = typeof t === 'string' ? t : (t.name || '');
