@@ -142,6 +142,27 @@ async function fetchBranchData(branchTag, tagMap) {
                 if (displayStaff.length === 0) {
                     staffEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px">Chưa có dữ liệu nhân viên</div>';
                 } else {
+                    // Compute signed, visiting, wrongTarget counts per staff from customer tags
+                    const staffTagCounts = {};
+                    for (const c of (customers.data || [])) {
+                        const tags = (c.tags || []).map(t => typeof t === 'string' ? t : t.name || '');
+                        const tagsStr = tags.join(' ').toLowerCase();
+                        const isSigned = tagsStr.includes('ký') || tagsStr.includes('kí') || tagsStr.includes('chốt');
+                        const isVisiting = tagsStr.includes('hẹn đến') || tagsStr.includes('đã đến');
+                        const isWrong = tagsStr.includes('sai đối tượng');
+                        // Find which staff owns this customer
+                        for (const tag of tags) {
+                            const staffMatch = Object.values(tagMap).find(t => t.category === 'staff' && t.tag_name.toLowerCase() === tag.toLowerCase());
+                            if (staffMatch) {
+                                const key = staffMatch.display_name.toLowerCase();
+                                if (!staffTagCounts[key]) staffTagCounts[key] = { signed: 0, visiting: 0, wrong: 0 };
+                                if (isSigned) staffTagCounts[key].signed++;
+                                if (isVisiting) staffTagCounts[key].visiting++;
+                                if (isWrong) staffTagCounts[key].wrong++;
+                            }
+                        }
+                    }
+
                     staffEl.innerHTML = `<table class="data-table"><thead><tr>
                         <th>Nhân viên</th>
                         <th class="text-right">Hội thoại</th>
@@ -149,12 +170,18 @@ async function fetchBranchData(branchTag, tagMap) {
                         <th class="text-right">Inbox</th>
                         <th class="text-right">Comment</th>
                         <th class="text-right">Khách hàng</th>
+                        <th class="text-right">Hẹn đến</th>
                         <th class="text-right">Có SĐT</th>
                         <th class="text-right">Sai ĐT</th>
                         <th class="text-right">Đã chốt</th>
                         <th class="text-right">Tỷ lệ chốt</th>
                     </tr></thead><tbody>${displayStaff.map(s => {
-                        const rate = s.conversations > 0 ? (s.signed / s.conversations * 100) : 0;
+                        const name = (s.userName || '').toLowerCase();
+                        const tc = staffTagCounts[name] || {};
+                        const staffSigned = tc.signed || s.signed || 0;
+                        const staffVisiting = tc.visiting || 0;
+                        const staffWrong = tc.wrong || s.wrongTarget || 0;
+                        const rate = s.customers > 0 ? (staffSigned / s.customers * 100) : 0;
                         return `<tr>
                             <td style="font-weight:600">${s.userName || '—'}</td>
                             <td class="text-right">${fmtNumber(s.conversations)}</td>
@@ -162,9 +189,10 @@ async function fetchBranchData(branchTag, tagMap) {
                             <td class="text-right">${fmtNumber(s.inbox)}</td>
                             <td class="text-right">${fmtNumber(s.comment)}</td>
                             <td class="text-right">${fmtNumber(s.customers)}</td>
+                            <td class="text-right" style="color:var(--purple)">${fmtNumber(staffVisiting)}</td>
                             <td class="text-right" style="color:var(--green)">${fmtNumber(s.phone)}</td>
-                            <td class="text-right" style="color:var(--red)">${fmtNumber(s.wrongTarget)}</td>
-                            <td class="text-right" style="color:var(--green);font-weight:600">${fmtNumber(s.signed)}</td>
+                            <td class="text-right" style="color:var(--red)">${fmtNumber(staffWrong)}</td>
+                            <td class="text-right" style="color:var(--green);font-weight:600">${fmtNumber(staffSigned)}</td>
                             <td class="text-right" style="color:${rate > 10 ? 'var(--green)' : 'var(--orange)'}">${fmtPercent(rate)}</td>
                         </tr>`;
                     }).join('')}
@@ -175,9 +203,10 @@ async function fetchBranchData(branchTag, tagMap) {
                         <td class="text-right">${fmtNumber(displayStaff.reduce((a,s) => a+s.inbox, 0))}</td>
                         <td class="text-right">${fmtNumber(displayStaff.reduce((a,s) => a+s.comment, 0))}</td>
                         <td class="text-right">${fmtNumber(displayStaff.reduce((a,s) => a+s.customers, 0))}</td>
+                        <td class="text-right">${fmtNumber(visiting)}</td>
                         <td class="text-right">${fmtNumber(displayStaff.reduce((a,s) => a+s.phone, 0))}</td>
-                        <td class="text-right">${fmtNumber(displayStaff.reduce((a,s) => a+s.wrongTarget, 0))}</td>
-                        <td class="text-right">${fmtNumber(displayStaff.reduce((a,s) => a+s.signed, 0))}</td>
+                        <td class="text-right">${fmtNumber(wrongTarget)}</td>
+                        <td class="text-right">${fmtNumber(signed)}</td>
                         <td class="text-right">—</td>
                     </tr>
                     </tbody></table>`;

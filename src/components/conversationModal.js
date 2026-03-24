@@ -65,7 +65,7 @@ async function loadConversations(customerId) {
                             <span class="conv-staff">${c.user_name || 'Chưa gán'}</span>
                             <span class="conv-date">${fmtDate(c.date)}</span>
                         </div>
-                        <div class="conv-snippet">${c.snippet || 'Không có nội dung'}</div>
+                        <div class="conv-snippet">${stripHtml(c.snippet || 'Không có nội dung')}</div>
                         <div class="conv-tags">
                             ${(c.tags || []).slice(0, 3).map(t => `<span class="tag" style="font-size:10px">${t}</span>`).join(' ')}
                         </div>
@@ -143,6 +143,10 @@ function renderAttachments(attachments) {
             return `<div class="msg-attachment" style="font-size:11px;color:var(--text-muted)">[${a.type || 'Tệp đính kèm'}]</div>`;
         }).join('');
     } catch { return ''; }
+}
+
+function stripHtml(str) {
+    return str.replace(/<[^>]*>/g, '').trim() || 'Không có nội dung';
 }
 
 function escapeHtml(str) {

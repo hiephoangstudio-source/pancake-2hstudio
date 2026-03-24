@@ -96,22 +96,25 @@ async function fetchTagsReport(tagMap) {
             { key: 'close_rate', label: 'Tỷ lệ', align: 'right', suffix: '%' },
         ]);
 
-        // Service tags from tagMap
-        const serviceData = getTagCountsByCategory('service', tagMap);
+        // Fetch real tag counts from DB
+        const tagCounts = await apiGet('/dashboard/tag-counts');
+
+        // Service tags from tagMap with real counts
+        const serviceData = getTagCountsByCategory('service', tagMap, tagCounts);
         renderTagTable('service-tags-table', serviceData, [
             { key: 'display_name', label: 'Dịch vụ' },
             { key: 'count', label: 'Khách', align: 'right' },
         ]);
 
-        // Lifecycle tags
-        const lifecycleData = getTagCountsByCategory('lifecycle', tagMap);
+        // Lifecycle tags with real counts
+        const lifecycleData = getTagCountsByCategory('lifecycle', tagMap, tagCounts);
         renderTagTable('lifecycle-tags-table', lifecycleData, [
             { key: 'display_name', label: 'Trạng thái' },
             { key: 'count', label: 'Khách', align: 'right' },
         ]);
 
-        // Location tags
-        const locationData = getTagCountsByCategory('location', tagMap);
+        // Location tags with real counts
+        const locationData = getTagCountsByCategory('location', tagMap, tagCounts);
         renderTagTable('location-tags-table', locationData, [
             { key: 'display_name', label: 'Địa điểm' },
             { key: 'count', label: 'Khách', align: 'right' },
@@ -122,11 +125,14 @@ async function fetchTagsReport(tagMap) {
     }
 }
 
-function getTagCountsByCategory(category, tagMap) {
+function getTagCountsByCategory(category, tagMap, tagCounts) {
     return Object.values(tagMap)
         .filter(t => t.category === category)
-        .map(t => ({ ...t, count: '—' }))
-        .sort((a, b) => a.sort_order - b.sort_order);
+        .map(t => ({
+            ...t,
+            count: tagCounts[t.tag_name.toLowerCase()] || 0
+        }))
+        .sort((a, b) => b.count - a.count);
 }
 
 function renderTagTable(containerId, data, columns) {

@@ -462,6 +462,35 @@ router.get('/branch-summary', async (req, res) => {
 });
 
 /**
+ * GET /api/dashboard/tag-counts
+ * Count customers per tag by scanning jsonb tags array.
+ */
+router.get('/tag-counts', async (req, res) => {
+    try {
+        const cached = getCached('tag_counts');
+        if (cached) return res.json(cached);
+
+        const { rows } = await query(`
+            SELECT tag_value, COUNT(DISTINCT c.pancake_id) AS customer_count
+            FROM customers c,
+                 jsonb_array_elements_text(c.tags) AS tag_value
+            WHERE c.tags IS NOT NULL AND jsonb_array_length(c.tags) > 0
+            GROUP BY tag_value
+            ORDER BY customer_count DESC
+        `);
+        const result = {};
+        for (const r of rows) {
+            result[r.tag_value.toLowerCase()] = parseInt(r.customer_count);
+        }
+        setCache('tag_counts', result, 120_000);
+        res.json(result);
+    } catch (err) {
+        console.error('Tag counts error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * GET /api/dashboard/customer/:id/conversations
  * Return conversation history for a specific customer.
  */
