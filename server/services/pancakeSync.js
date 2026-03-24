@@ -405,6 +405,29 @@ export async function syncPageData(pageId, accessToken, daysBack = 30) {
         results.errors.push(`UpdateSyncTime: ${e.message}`);
     }
 
+    // ── Post-sync: Merge conversation tags into customer tags ──
+    // Pancake API puts tags on conversations, not customers. This copies them.
+    try {
+        const { rowCount } = await query(`
+            UPDATE customers c SET tags = agg.merged_tags
+            FROM (
+                SELECT customer_pancake_id,
+                    (SELECT jsonb_agg(DISTINCT elem) FROM (
+                        SELECT jsonb_array_elements_text(conv.tags) AS elem
+                        FROM conversations conv
+                        WHERE conv.customer_pancake_id = sub.customer_pancake_id
+                          AND jsonb_array_length(conv.tags) > 0
+                    ) t) AS merged_tags
+                FROM (SELECT DISTINCT customer_pancake_id FROM conversations
+                      WHERE page_id = $1 AND customer_pancake_id != '' AND jsonb_array_length(tags) > 0) sub
+            ) agg
+            WHERE c.pancake_id = agg.customer_pancake_id AND agg.merged_tags IS NOT NULL
+        `, [pageId]);
+        results.taggedCustomers = rowCount;
+    } catch (e) {
+        results.errors.push(`TagMerge: ${e.message}`);
+    }
+
     results.success = results.errors.length === 0;
     return results;
 }

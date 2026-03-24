@@ -1,39 +1,60 @@
-// Fetch real page names from Pancake API (using Node.js to decrypt tokens)
+// Fetch real page names using master token
 import 'dotenv/config';
 import { query } from './db.js';
-import { decrypt } from './utils/crypto.js';
 
-const API_V1 = 'https://pages.fm/api/public_api/v1';
+const MASTER_TOKEN = process.env.PANCAKE_MASTER_TOKEN;
+if (!MASTER_TOKEN) { console.error('No PANCAKE_MASTER_TOKEN'); process.exit(1); }
 
-async function fixPageNames() {
-    console.log('Fetching real page names from Pancake API...');
-    const { rows: pages } = await query('SELECT page_id, access_token FROM pages WHERE is_active = true');
+async function main() {
+    console.log('Using master token to fetch page list...');
 
-    for (const page of pages) {
-        try {
-            const token = decrypt(page.access_token);
-            const url = `${API_V1}/pages/${page.page_id}?page_access_token=${encodeURIComponent(token)}`;
-            const res = await fetch(url);
-            if (!res.ok) { console.warn(`  ${page.page_id}: HTTP ${res.status}`); continue; }
-            const data = await res.json();
-            const name = data.page?.name || data.name || '';
-            if (name) {
-                await query('UPDATE pages SET name = $1 WHERE page_id = $2', [name, page.page_id]);
-                console.log(`  ✅ ${page.page_id} → ${name}`);
-            } else {
-                console.warn(`  ⚠️ ${page.page_id}: no name in response`);
+    // Try the Pancake API with master token
+    const url = `https://pages.fm/api/public_api/v1/pages?api_key=${encodeURIComponent(MASTER_TOKEN)}`;
+    try {
+        const res = await fetch(url);
+        const text = await res.text();
+        console.log('Response status:', res.status);
+        console.log('Response (first 500 chars):', text.substring(0, 500));
+
+        if (res.ok) {
+            const data = JSON.parse(text);
+            const pages = data.pages || data.data || (Array.isArray(data) ? data : []);
+            console.log(`Found ${pages.length} pages`);
+            for (const p of pages) {
+                const id = String(p.id || p.page_id || '');
+                const name = p.name || '';
+                if (id && name) {
+                    await query('UPDATE pages SET name = $1 WHERE page_id = $2', [name, id]);
+                    console.log(`  ✅ ${id} → ${name}`);
+                }
             }
-        } catch (e) {
-            console.error(`  ❌ ${page.page_id}: ${e.message}`);
         }
+    } catch (e) {
+        console.error('Master token API failed:', e.message);
     }
 
-    // Show results
-    const { rows: updated } = await query('SELECT page_id, name FROM pages ORDER BY name');
-    console.log('\nUpdated page names:');
-    for (const p of updated) console.log(`  ${p.page_id} → ${p.name}`);
+    // Alternative: try pages.fm conversations API to extract page names from conversation data
+    console.log('\nAlternative: extracting names from stored conversation data...');
+    // The page names might be in the v1 database backup. Let's check if there's a page_name field anywhere.
+    try {
+        const { rows } = await query(`
+            SELECT DISTINCT page_id,
+                   (SELECT name FROM users WHERE pancake_id = (
+                       SELECT user_pancake_id FROM daily_reports WHERE page_id = pages.page_id LIMIT 1
+                   )) as first_user_name
+            FROM pages
+            ORDER BY page_id
+        `);
+        console.log('Pages with user info:');
+        for (const r of rows) console.log(`  ${r.page_id} → user: ${r.first_user_name || 'none'}`);
+    } catch (e) {}
+
+    // Show final state
+    const { rows: final } = await query('SELECT page_id, name FROM pages ORDER BY name');
+    console.log('\nFinal page names:');
+    for (const p of final) console.log(`  ${p.page_id} → ${p.name}`);
 
     process.exit(0);
 }
 
-fixPageNames().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => { console.error(e); process.exit(1); });

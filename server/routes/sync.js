@@ -163,4 +163,47 @@ router.get('/status', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/sync/page-name — Update a page's display name
+ * Body: { pageId, name }
+ */
+router.post('/page-name', async (req, res) => {
+    try {
+        const { pageId, name } = req.body;
+        if (!pageId || !name) return res.status(400).json({ error: 'pageId and name required' });
+        await query('UPDATE pages SET name = $1 WHERE page_id = $2', [name.trim(), pageId]);
+        clearCache();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * PATCH /api/sync/refresh-tags — Re-merge conversation tags into customer tags
+ */
+router.patch('/refresh-tags', async (req, res) => {
+    try {
+        const { rowCount } = await query(`
+            UPDATE customers c SET tags = agg.merged_tags
+            FROM (
+                SELECT customer_pancake_id,
+                    (SELECT jsonb_agg(DISTINCT elem) FROM (
+                        SELECT jsonb_array_elements_text(conv.tags) AS elem
+                        FROM conversations conv
+                        WHERE conv.customer_pancake_id = sub.customer_pancake_id
+                          AND jsonb_array_length(conv.tags) > 0
+                    ) t) AS merged_tags
+                FROM (SELECT DISTINCT customer_pancake_id FROM conversations
+                      WHERE customer_pancake_id != '' AND jsonb_array_length(tags) > 0) sub
+            ) agg
+            WHERE c.pancake_id = agg.customer_pancake_id AND agg.merged_tags IS NOT NULL
+        `);
+        clearCache();
+        res.json({ success: true, taggedCustomers: rowCount });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 export default router;
