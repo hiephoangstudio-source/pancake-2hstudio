@@ -16,11 +16,16 @@
         </div>
         <form id="login-form" style="display:flex;flex-direction:column;gap:12px">
             <div>
-                <label style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block">Master Token</label>
-                <input type="password" id="master-token" placeholder="Nhập master token..."
+                <label style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block">Tên đăng nhập</label>
+                <input type="text" id="login-username" placeholder="Nhập tên đăng nhập..."
                     style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;outline:none" autofocus />
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;font-weight:600;justify-content:center">
+            <div>
+                <label style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block">Mật khẩu</label>
+                <input type="password" id="login-password" placeholder="Nhập mật khẩu..."
+                    style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;outline:none" />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;font-weight:600;justify-content:center;margin-top:4px">
                 Đăng nhập
             </button>
             <div id="login-error" style="color:var(--red);font-size:12px;text-align:center;display:none"></div>
@@ -30,25 +35,33 @@
         const API_BASE = import.meta.env?.VITE_API_URL || '/api';
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const token = document.getElementById('master-token').value.trim();
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
             const errEl = document.getElementById('login-error');
-            if (!token) { errEl.textContent = 'Vui lòng nhập token'; errEl.style.display = 'block'; return; }
+            errEl.style.display = 'none';
+
+            if (!username || !password) {
+                errEl.textContent = 'Vui lòng nhập tên đăng nhập và mật khẩu';
+                errEl.style.display = 'block';
+                return;
+            }
             try {
                 const res = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ masterToken: token }),
+                    body: JSON.stringify({ username, password }),
                 });
                 const data = await res.json();
                 if (data.token) {
                     localStorage.setItem('auth_token', data.token);
+                    if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user));
                     window.location.href = '/';
                 } else {
-                    errEl.textContent = data.error || 'Token không hợp lệ';
+                    errEl.textContent = data.error || 'Sai tên đăng nhập hoặc mật khẩu';
                     errEl.style.display = 'block';
                 }
             } catch (err) {
-                errEl.textContent = 'Lỗi kết nối server';
+                errEl.textContent = 'Không kết nối được server';
                 errEl.style.display = 'block';
             }
         });
