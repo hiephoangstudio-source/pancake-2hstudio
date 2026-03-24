@@ -62,11 +62,16 @@ export function renderSidebar(container, activePage) {
             const href = link.getAttribute('href');
             window.history.pushState({}, '', href);
             window.dispatchEvent(new PopStateEvent('popstate'));
+            closeSidebarMobile();
         });
     });
 
     // Re-render lucide icons
     if (window.lucide) window.lucide.createIcons();
+
+    // Overlay click → close sidebar
+    const overlay = document.getElementById('sidebar-overlay');
+    if (overlay) overlay.addEventListener('click', closeSidebarMobile);
 }
 
 export function updateSyncTime(timeStr) {
@@ -76,5 +81,22 @@ export function updateSyncTime(timeStr) {
 
 export function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.toggle('collapsed');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (!sidebar) return;
+
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        sidebar.classList.toggle('open');
+        overlay?.classList.toggle('active', sidebar.classList.contains('open'));
+    } else {
+        sidebar.classList.toggle('collapsed');
+    }
+}
+
+function closeSidebarMobile() {
+    if (window.innerWidth > 768) return;
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar?.classList.remove('open');
+    overlay?.classList.remove('active');
 }

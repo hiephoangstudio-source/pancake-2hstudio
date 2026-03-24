@@ -18,20 +18,20 @@
     <div class="app-layout">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
         <!-- Main -->
         <main class="app-main">
             <header class="app-header" id="app-header">
                 <div class="header-left">
-                    <button class="btn btn-sm" id="sidebar-toggle" title="Ẩn/Hiện menu">
-                        <i data-lucide="panel-left-close"></i>
+                    <button class="menu-toggle" id="sidebar-toggle" title="Ẩn/Hiện menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
                     </button>
                     <span class="header-title" id="header-title">Tổng quan</span>
                 </div>
                 <div class="header-filters" id="header-filters"></div>
             </header>
             <div class="app-content" id="app-content">
-                <!-- Page content rendered here by router -->
                 <div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-muted)">
                     <i data-lucide="loader-2" style="width:24px;height:24px;animation:spin 1s linear infinite"></i>
                     <span style="margin-left:8px">Đang tải...</span>
