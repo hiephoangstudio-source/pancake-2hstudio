@@ -1,6 +1,7 @@
 import { apiGet } from '../utils/api.js';
 import { fmtNumber, fmtDate } from '../utils/format.js';
 import { classifyTags, getBranch } from '../utils/tagClassifier.js';
+import { openConversationModal } from '../components/conversationModal.js';
 
 export function destroy() {}
 
@@ -133,7 +134,7 @@ async function fetchCustomers(page, tagMap) {
             }).join(' ');
 
             return `
-                <tr>
+                <tr class="clickable" data-customer-id="${c.pancake_id}" data-customer-name="${c.name || ''}">
                     <td style="font-weight:600">${c.name || '—'}</td>
                     <td style="font-size:12px">${phone || '<span style="color:var(--text-muted)">—</span>'}</td>
                     <td><span class="tag tag-branch">${branchName}</span></td>
@@ -143,6 +144,16 @@ async function fetchCustomers(page, tagMap) {
                 </tr>
             `;
         }).join('');
+
+        // Attach conversation modal click handlers
+        document.querySelectorAll('#cust-body tr.clickable').forEach(row => {
+            row.addEventListener('click', () => {
+                openConversationModal({
+                    pancake_id: row.dataset.customerId,
+                    name: row.dataset.customerName
+                });
+            });
+        });
 
         // Pagination
         const pagEl = document.getElementById('cust-pagination');
