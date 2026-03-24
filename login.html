@@ -5,34 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Đăng nhập — 2H Studio</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0F172A;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+        }
+        .login-header { text-align: center; margin-bottom: 24px; }
+        .login-header img { height: 48px; margin-bottom: 12px; }
+        .login-header h1 { font-size: 20px; font-weight: 800; color: #0F172A; }
+        .login-header p { font-size: 13px; color: #94A3B8; margin-top: 4px; }
+        .login-form { display: flex; flex-direction: column; gap: 12px; }
+        .form-label { font-size: 12px; font-weight: 500; color: #64748B; margin-bottom: 4px; display: block; }
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .form-input:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .login-btn {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            background: #3B82F6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: background 0.15s;
+        }
+        .login-btn:hover { background: #2563EB; }
+        .login-error { color: #EF4444; font-size: 12px; text-align: center; display: none; }
+        @media (max-width: 480px) {
+            .login-card { margin: 16px; padding: 28px; }
+        }
+    </style>
 </head>
-<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-sidebar)">
-    <div style="background:var(--bg-card);border-radius:var(--radius-xl);padding:40px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)">
-        <div style="text-align:center;margin-bottom:24px">
-            <img src="/logo.png" alt="2H Studio" style="height:48px;margin-bottom:12px" onerror="this.style.display='none'" />
-            <h1 style="font-size:20px;font-weight:800;color:var(--text-primary)">2H Studio</h1>
-            <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Đăng nhập để tiếp tục</p>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <img src="/logo.png" alt="2H Studio" onerror="this.style.display='none'" />
+            <h1>2H Studio</h1>
+            <p>Đăng nhập để tiếp tục</p>
         </div>
-        <form id="login-form" style="display:flex;flex-direction:column;gap:12px">
+        <form class="login-form" id="login-form">
             <div>
-                <label style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block">Tên đăng nhập</label>
-                <input type="text" id="login-username" placeholder="Nhập tên đăng nhập..."
-                    style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;outline:none" autofocus />
+                <label class="form-label">Tên đăng nhập</label>
+                <input type="text" class="form-input" id="login-username" placeholder="Nhập tên đăng nhập..." autofocus />
             </div>
             <div>
-                <label style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block">Mật khẩu</label>
-                <input type="password" id="login-password" placeholder="Nhập mật khẩu..."
-                    style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;outline:none" />
+                <label class="form-label">Mật khẩu</label>
+                <input type="password" class="form-input" id="login-password" placeholder="Nhập mật khẩu..." />
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;padding:10px;font-size:14px;font-weight:600;justify-content:center;margin-top:4px">
-                Đăng nhập
-            </button>
-            <div id="login-error" style="color:var(--red);font-size:12px;text-align:center;display:none"></div>
+            <button type="submit" class="login-btn">Đăng nhập</button>
+            <div class="login-error" id="login-error"></div>
         </form>
     </div>
-    <script type="module">
-        const API_BASE = import.meta.env?.VITE_API_URL || '/api';
+    <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('login-username').value.trim();
@@ -46,7 +97,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${API_BASE}/auth/login`, {
+                const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password }),

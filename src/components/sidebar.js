@@ -17,7 +17,7 @@ const MENU = [
     { id: 'settings', label: 'Cấu hình', icon: 'settings', href: '/?page=settings' },
 ];
 
-export function renderSidebar(container, activePage) {
+export async function renderSidebar(container, activePage) {
     let html = `
         <div class="sidebar-brand">
             <img src="/logo.png" alt="2H Studio" onerror="this.style.display='none'" />
@@ -46,14 +46,41 @@ export function renderSidebar(container, activePage) {
     html += `
         </nav>
         <div class="sidebar-footer">
-            <div style="display:flex;align-items:center;gap:4px">
-                <i data-lucide="clock" style="width:12px;height:12px"></i>
+            <div id="sidebar-user" style="display:flex;align-items:center;gap:8px;margin-bottom:8px"></div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(148,163,184,0.5)">
+                <i data-lucide="clock" style="width:10px;height:10px"></i>
                 <span id="last-sync-time">—</span>
             </div>
         </div>
     `;
 
+
     container.innerHTML = html;
+
+    // Render user info in footer
+    const userEl = document.getElementById('sidebar-user');
+    if (userEl) {
+        try {
+            const { getUser, logout } = await import('../utils/auth.js');
+            const user = getUser();
+            if (user) {
+                const initial = (user.name || 'U')[0].toUpperCase();
+                userEl.innerHTML = `
+                    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#8B5CF6);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;flex-shrink:0">${initial}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:12px;font-weight:600;color:#E2E8F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name || 'User'}</div>
+                        <div style="font-size:9px;color:rgba(148,163,184,0.7);text-transform:uppercase">${user.role || 'staff'}</div>
+                    </div>
+                    <button id="logout-btn" style="background:none;border:none;color:rgba(148,163,184,0.5);cursor:pointer;padding:4px" title="Đăng xuất">
+                        <i data-lucide="log-out" style="width:14px;height:14px"></i>
+                    </button>
+                `;
+                document.getElementById('logout-btn')?.addEventListener('click', () => {
+                    if (confirm('Đăng xuất?')) logout();
+                });
+            }
+        } catch {}
+    }
 
     // SPA navigation
     container.querySelectorAll('.sidebar-link').forEach(link => {

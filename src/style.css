@@ -378,6 +378,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 
     .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .chart-grid-3, .chart-grid-2 { grid-template-columns: 1fr; }
+    .settings-grid { grid-template-columns: 1fr !important; }
 
     .header-filters {
         display: flex;

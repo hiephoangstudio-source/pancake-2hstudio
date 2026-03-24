@@ -11,8 +11,33 @@ export async function render(container) {
     if (filtersEl) filtersEl.innerHTML = '';
 
     container.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-            <!-- Pages config -->
+        <!-- Master Token + Sync -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="settings-grid">
+            <div class="card">
+                <div class="chart-title"><i data-lucide="key"></i> Pancake Master Token</div>
+                <p style="font-size:12px;color:var(--text-muted);margin:8px 0">Token xác thực API Pancake để đồng bộ dữ liệu.</p>
+                <div id="token-status" style="font-size:12px;margin-bottom:8px"></div>
+                <input id="master-token-input" placeholder="Nhập master token mới..." type="password"
+                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;margin-bottom:8px;font-family:monospace" />
+                <button class="btn btn-primary" id="save-token-btn" style="width:100%"><i data-lucide="save"></i> Lưu Token</button>
+            </div>
+            <div class="card">
+                <div class="chart-title"><i data-lucide="refresh-cw"></i> Đồng bộ dữ liệu</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+                    <button class="btn" id="sync-today-btn"><i data-lucide="zap"></i> Hôm nay</button>
+                    <button class="btn" id="sync-week-btn"><i data-lucide="calendar"></i> 7 ngày</button>
+                    <button class="btn" id="sync-month-btn"><i data-lucide="calendar-range"></i> 30 ngày</button>
+                </div>
+                <div id="sync-status" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+                    <div class="chart-title" style="margin-bottom:4px"><i data-lucide="user"></i> Thông tin đăng nhập</div>
+                    <div id="user-info" style="font-size:12px;color:var(--text-secondary)"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pages + Tags -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px" class="settings-grid">
             <div class="card">
                 <div class="chart-title"><i data-lucide="file-text"></i> Quản lý Pages (Trang Facebook)</div>
                 <div id="pages-list" style="margin-top:8px">Đang tải...</div>
@@ -24,35 +49,48 @@ export async function render(container) {
                     <button class="btn btn-primary" id="add-page-btn" style="width:100%">Thêm trang</button>
                 </div>
             </div>
-
-            <!-- Tag classifications -->
             <div class="card">
                 <div class="chart-title"><i data-lucide="tag"></i> Phân loại Tags</div>
                 <div id="tags-config" style="margin-top:8px">Đang tải...</div>
             </div>
         </div>
-
-        <!-- Sync status -->
-        <div class="card" style="margin-top:16px">
-            <div class="chart-title"><i data-lucide="refresh-cw"></i> Đồng bộ dữ liệu</div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="btn" id="sync-today-btn"><i data-lucide="zap"></i> Đồng bộ hôm nay</button>
-                <button class="btn" id="sync-week-btn"><i data-lucide="calendar"></i> Đồng bộ 7 ngày</button>
-                <button class="btn" id="sync-month-btn"><i data-lucide="calendar-range"></i> Đồng bộ 30 ngày</button>
-            </div>
-            <div id="sync-status" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
-        </div>
     `;
     if (window.lucide) window.lucide.createIcons();
+
+    // Show current user info
+    try {
+        const { getUser } = await import('../utils/auth.js');
+        const user = getUser();
+        const userInfoEl = document.getElementById('user-info');
+        if (userInfoEl && user) {
+            userInfoEl.innerHTML = `<strong>${user.name || 'Admin'}</strong> · ${user.role || 'admin'}`;
+        }
+    } catch {}
+
+    // Check token status
+    try {
+        const statusEl = document.getElementById('token-status');
+        const res = await apiGet('/sync/status');
+        if (statusEl) {
+            statusEl.innerHTML = res?.hasToken
+                ? '<span style="color:var(--green)">✅ Token đã được cấu hình</span>'
+                : '<span style="color:var(--red)">❌ Chưa có token — cần nhập để đồng bộ</span>';
+        }
+    } catch {
+        const statusEl = document.getElementById('token-status');
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-muted)">Không thể kiểm tra trạng thái</span>';
+    }
 
     await loadPages();
     await loadTagConfig();
 
     document.getElementById('add-page-btn')?.addEventListener('click', addPage);
+    document.getElementById('save-token-btn')?.addEventListener('click', saveToken);
     document.getElementById('sync-today-btn')?.addEventListener('click', () => triggerSync(1));
     document.getElementById('sync-week-btn')?.addEventListener('click', () => triggerSync(7));
     document.getElementById('sync-month-btn')?.addEventListener('click', () => triggerSync(30));
 }
+
 
 async function loadPages() {
     try {
@@ -111,6 +149,18 @@ async function addPage() {
         document.getElementById('new-page-name').value = '';
         document.getElementById('new-page-token').value = '';
         await loadPages();
+    } catch (err) { toastError(err.message); }
+}
+
+async function saveToken() {
+    const token = document.getElementById('master-token-input')?.value?.trim();
+    if (!token) { toastError('Vui lòng nhập master token'); return; }
+    try {
+        await apiPost('/sync/master-token', { token });
+        toastSuccess('Đã cập nhật Master Token!');
+        document.getElementById('master-token-input').value = '';
+        const statusEl = document.getElementById('token-status');
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Token đã được cấu hình</span>';
     } catch (err) { toastError(err.message); }
 }
 

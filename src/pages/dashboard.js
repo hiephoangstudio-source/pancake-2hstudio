@@ -213,6 +213,36 @@ function renderStaffChart(data) {
             </div>
         </div>
     `).join('');
+
+    // Render pie chart for "Phân bố tin nhắn"
+    const totalInbox = data.staff.reduce((s, r) => s + (r.inbox || 0), 0);
+    const totalComment = data.staff.reduce((s, r) => s + (r.comment || 0), 0);
+    const totalOther = data.totals ? Math.max(0, (data.totals.messages || 0) - totalInbox - totalComment) : 0;
+
+    const pieCtx = document.getElementById('type-chart')?.getContext('2d');
+    if (pieCtx && (totalInbox + totalComment + totalOther) > 0) {
+        if (charts.type) charts.type.destroy();
+        charts.type = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Inbox', 'Comment', 'Khác'],
+                datasets: [{
+                    data: [totalInbox, totalComment, totalOther],
+                    backgroundColor: ['#3B82F6', '#8B5CF6', '#94A3B8'],
+                    borderWidth: 0,
+                    cutout: '55%',
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } },
+                    datalabels: { display: false },
+                },
+            },
+        });
+    }
 }
 
 async function renderBranchComparison(staffData, tagMap) {

@@ -157,7 +157,7 @@ router.get('/status', async (req, res) => {
             WHERE is_active = true
             ORDER BY name
         `);
-        res.json({ pages: rows, server_time: new Date().toISOString() });
+        res.json({ pages: rows, server_time: new Date().toISOString(), hasToken: !!process.env.PANCAKE_MASTER_TOKEN });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
