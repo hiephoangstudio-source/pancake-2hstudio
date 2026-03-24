@@ -113,7 +113,10 @@ async function fetchCustomers(page, tagMap) {
         tbody.innerHTML = data.data.map(c => {
             const classified = classifyTags(c.tags, tagMap);
             const branchName = getBranch(c.tags, tagMap);
-            const phone = c.phone || (c.phone_numbers && c.phone_numbers.length > 0 ? c.phone_numbers[0] : '');
+            const rawPhone = c.phone || '';
+            const phoneStr = rawPhone && typeof rawPhone === 'object' ? (rawPhone.captured || '') : rawPhone;
+            const pn = c.phone_numbers || [];
+            const phone = phoneStr || (pn.length > 0 ? (typeof pn[0] === 'object' ? pn[0].captured || '' : pn[0]) : '');
             const tagHtml = (c.tags || []).slice(0, 4).map(t => {
                 const name = typeof t === 'string' ? t : (t.name || '');
                 const entry = tagMap[name.toLowerCase()];

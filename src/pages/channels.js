@@ -93,7 +93,7 @@ async function fetchChannels() {
         let url = `/channels?from=${from}&to=${to}`;
         if (pageId) url += `&pageId=${pageId}`;
         const data = await apiGet(url);
-        const channels = Array.isArray(data) ? data : (data.channels || []);
+        const channels = Array.isArray(data) ? data : (data.data || data.channels || []);
 
         // Aggregate
         let totalSpend = 0, totalImpressions = 0, totalClicks = 0, totalConv = 0, totalPhones = 0;

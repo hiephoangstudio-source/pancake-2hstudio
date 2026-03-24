@@ -88,9 +88,17 @@ async function fetchOrders(tagMap) {
             return;
         }
 
+        // Get page names for lookup
+        let pageNameMap = {};
+        try { const pgs = await apiGet('/pages'); pgs.forEach(p => { pageNameMap[p.page_id] = p.name; }); } catch {}
+
         tbody.innerHTML = data.data.map(c => {
             const branchName = getBranch(c.tags, tagMap);
-            const phone = c.phone || (c.phone_numbers?.length > 0 ? c.phone_numbers[0] : '');
+            const rawPhone = c.phone || '';
+            const phone = rawPhone && typeof rawPhone === 'object' ? (rawPhone.captured || JSON.stringify(rawPhone)) : rawPhone;
+            const pn = c.phone_numbers || [];
+            const firstPhone = phone || (pn.length > 0 ? (typeof pn[0] === 'object' ? pn[0].captured || '' : pn[0]) : '');
+            const pageName = pageNameMap[c.page_id] || c.page_id || '—';
             const tagHtml = (c.tags || []).slice(0, 3).map(t => {
                 const name = typeof t === 'string' ? t : (t.name || '');
                 const entry = tagMap[name.toLowerCase()];
@@ -100,8 +108,8 @@ async function fetchOrders(tagMap) {
             return `
                 <tr>
                     <td style="font-weight:600">${c.name || '—'}</td>
-                    <td style="font-size:12px;color:var(--text-secondary)">${c.page_id || '—'}</td>
-                    <td style="font-size:12px">${phone || '—'}</td>
+                    <td style="font-size:12px;color:var(--text-secondary)">${pageName}</td>
+                    <td style="font-size:12px">${firstPhone || '—'}</td>
                     <td><span class="tag tag-branch">${branchName}</span></td>
                     <td style="display:flex;gap:4px;flex-wrap:wrap">${tagHtml}</td>
                     <td style="font-size:12px;color:var(--text-secondary)">${fmtDate(c.last_active)}</td>
